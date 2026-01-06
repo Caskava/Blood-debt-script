@@ -1483,11 +1483,11 @@ local ESPToggle = ESPTab:CreateToggle({
 ESPTab:CreateDropdown({
     Name = "Nametag Display Mode",
     Options = {"Role", "Username", "Character Name"},
-    CurrentOption = {"Role"},
+    CurrentOption = "Role",  -- ← STRING
     MultipleOptions = false,
     Flag = "NametagModeDropdown",
-    Callback = function(Option)
-        nametagMode = Option[1] or "Role"
+    Callback = function(Option)  -- ← STRING
+        nametagMode = Option or "Role"
         print("Blood Debt Role Detector: Nametag mode changed to:", nametagMode)
         
         -- Re-apply tags to update nametags immediately
@@ -1607,20 +1607,20 @@ AimbotTab:CreateToggle({
 
 -- Target Parts Dropdown
 AimbotTab:CreateDropdown({
-	Name = "Target Part",
-	Options = {"Head", "Torso", "HumanoidRootPart", "Random"},
-	CurrentOption = "Head",  -- Also fix this: should be a string, not {"Head"}
-	MultipleOptions = false,
-	Flag = "TargetPartDropdown",
-	Callback = function(Option)  -- Option is a string
-		if Option == "Random" then
-			AimbotConfig.UseRandomPart = true
-			AimbotConfig.TargetParts = {"Head", "Torso", "HumanoidRootPart"}
-		else
-			AimbotConfig.UseRandomPart = false
-			AimbotConfig.TargetParts = {Option}
-		end
-	end
+    Name = "Target Part",
+    Options = {"Head", "Torso", "HumanoidRootPart", "Random"},
+    CurrentOption = "Head",  -- ← STRING, not {"Head"}
+    MultipleOptions = false,
+    Flag = "TargetPartDropdown",
+    Callback = function(Option)  -- ← Option is a STRING
+        if Option == "Random" then
+            AimbotConfig.UseRandomPart = true
+            AimbotConfig.TargetParts = {"Head", "Torso", "HumanoidRootPart"}
+        else
+            AimbotConfig.UseRandomPart = false
+            AimbotConfig.TargetParts = {Option}  -- wrap string in table only if needed by your logic
+        end
+    end
 })
 
 -- Configuration Section
