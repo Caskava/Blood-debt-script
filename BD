@@ -1607,20 +1607,20 @@ AimbotTab:CreateToggle({
 
 -- Target Parts Dropdown
 AimbotTab:CreateDropdown({
-    Name = "Target Part",
-    Options = {"Head", "Torso", "HumanoidRootPart", "Random"},
-    CurrentOption = {"Head"},
-    MultipleOptions = false,
-    Flag = "TargetPartDropdown",
-    Callback = function(Option)
-        if Option[1] == "Random" then
-            AimbotConfig.UseRandomPart = true
-            AimbotConfig.TargetParts = {"Head", "Torso", "HumanoidRootPart"}
-        else
-            AimbotConfig.UseRandomPart = false
-            AimbotConfig.TargetParts = {Option[1]}
-        end
-    end
+	Name = "Target Part",
+	Options = {"Head", "Torso", "HumanoidRootPart", "Random"},
+	CurrentOption = "Head",  -- Also fix this: should be a string, not {"Head"}
+	MultipleOptions = false,
+	Flag = "TargetPartDropdown",
+	Callback = function(Option)  -- Option is a string
+		if Option == "Random" then
+			AimbotConfig.UseRandomPart = true
+			AimbotConfig.TargetParts = {"Head", "Torso", "HumanoidRootPart"}
+		else
+			AimbotConfig.UseRandomPart = false
+			AimbotConfig.TargetParts = {Option}
+		end
+	end
 })
 
 -- Configuration Section
