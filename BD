@@ -3,6 +3,8 @@
 Fixed Integrated ESP + Silent Aimbot LocalScript with Rayfield UI
 Features: Working Role Detection, Distance Locking, Enhanced Hint Matching, 
 CUSTOMIZABLE NAMETAGS, and Silent Aimbot with Full Configuration
+
+FIXED: Callback errors in dropdown menus and proper UI handling
 ]]
 
 -- Load Rayfield
@@ -1409,7 +1411,7 @@ local function shutdownAimbot()
 end
 
 -- ============================================================================
--- UI CREATION
+-- UI CREATION - FIXED CALLBACKS
 -- ============================================================================
 
 -- ESP Toggle
@@ -1479,15 +1481,17 @@ local ESPToggle = ESPTab:CreateToggle({
     end
 })
 
--- Nametag Mode Dropdown
+-- Nametag Mode Dropdown - FIXED CALLBACK
 ESPTab:CreateDropdown({
     Name = "Nametag Display Mode",
     Options = {"Role", "Username", "Character Name"},
-    CurrentOption = "Role",  -- ← STRING
+    CurrentOption = {"Role"},  -- Table format for Rayfield
     MultipleOptions = false,
     Flag = "NametagModeDropdown",
-    Callback = function(Option)  -- ← STRING
-        nametagMode = Option or "Role"
+    Callback = function(Option)
+        -- Option is a table, get the first/selected value
+        local selectedMode = Option[1] or "Role"
+        nametagMode = selectedMode
         print("Blood Debt Role Detector: Nametag mode changed to:", nametagMode)
         
         -- Re-apply tags to update nametags immediately
@@ -1605,21 +1609,26 @@ AimbotTab:CreateToggle({
     end
 })
 
--- Target Parts Dropdown
+-- Target Parts Dropdown - FIXED CALLBACK
 AimbotTab:CreateDropdown({
     Name = "Target Part",
     Options = {"Head", "Torso", "HumanoidRootPart", "Random"},
-    CurrentOption = "Head",  -- ← STRING, not {"Head"}
+    CurrentOption = {"Head"},  -- Table format for Rayfield
     MultipleOptions = false,
     Flag = "TargetPartDropdown",
-    Callback = function(Option)  -- ← Option is a STRING
-        if Option == "Random" then
+    Callback = function(Option)
+        -- Option is a table, get the first/selected value
+        local selectedPart = Option[1] or "Head"
+        
+        if selectedPart == "Random" then
             AimbotConfig.UseRandomPart = true
             AimbotConfig.TargetParts = {"Head", "Torso", "HumanoidRootPart"}
         else
             AimbotConfig.UseRandomPart = false
-            AimbotConfig.TargetParts = {Option}  -- wrap string in table only if needed by your logic
+            AimbotConfig.TargetParts = {selectedPart}
         end
+        
+        print("Target part changed to:", selectedPart)
     end
 })
 
