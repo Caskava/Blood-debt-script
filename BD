@@ -1,10 +1,10 @@
 --NU-FWQ
 --[[
-Fixed Integrated ESP + Silent Aimbot LocalScript with Rayfield UI
+Fully Integrated ESP + Silent Aimbot LocalScript with Rayfield UI
 Features: Working Role Detection, Distance Locking, Enhanced Hint Matching, 
 CUSTOMIZABLE NAMETAGS, and Silent Aimbot with Full Configuration
 
-FIXED: Callback errors in dropdown menus and proper UI handling
+COMPLETE: Both ESP and Silent Aimbot run independently with their own toggle buttons
 ]]
 
 -- Load Rayfield
@@ -32,7 +32,7 @@ local AimbotTab = Window:CreateTab("Silent Aim", "crosshair")
 local ConfigTab = Window:CreateTab("Configuration", "settings")
 
 -- ============================================================================
--- ESP VARIABLES (from original working script)
+-- ESP VARIABLES (COMPLETE FROM WORKING SCRIPT)
 -- ============================================================================
 
 local espEnabled = false
@@ -47,7 +47,7 @@ local firstVigilanteTracker = {}
 local playersWithStandardKillerWeapons = {}
 local droppedGunConnections = {}
 
--- Weapon lists (from original)
+-- Weapon lists (complete from original)
 local killerWeapons = {
     ["CharcoalSteel JS-22"] = true,
     ["Pretty Pink RR-LCP"] = true,
@@ -217,7 +217,7 @@ local allRoleWeapons = {}
 for name, _ in pairs(killerWeapons) do allRoleWeapons[name] = true end
 for name, _ in pairs(vigilanteWeapons) do allRoleWeapons[name] = true end
 
--- Role colors and labels (from original)
+-- Role colors and labels
 local killerColor = Color3.fromRGB(255, 0, 0)
 local killerLabel = "KILLER"
 local innocentColor = Color3.fromRGB(0, 255, 0)
@@ -244,7 +244,7 @@ local BloodFolder = Workspace:WaitForChild("BloodFolder")
 local nametagMode = "Role"
 
 -- ============================================================================
--- ESP FUNCTIONS (from original working script)
+-- ESP FUNCTIONS (COMPLETE FROM WORKING SCRIPT)
 -- ============================================================================
 
 local function getCharacterName(player)
@@ -960,7 +960,7 @@ local function tpToDroppedGun()
 end
 
 -- ============================================================================
--- SILENT AIMBOT CONFIGURATION
+// SILENT AIMBOT CONFIGURATION
 -- ============================================================================
 
 local AimbotConfig = {
@@ -982,7 +982,7 @@ local AimbotConfig = {
 }
 
 -- ============================================================================
--- AIMBOT VARIABLES AND FUNCTIONS
+// AIMBOT VARIABLES AND FUNCTIONS
 -- ============================================================================
 
 local aimbotActive = false
@@ -997,6 +997,13 @@ local LocalPlayer = nil
 local RunService = nil
 local Workspace = nil
 local ReplicatedStorage = nil
+
+-- Apply global config if exists
+if getgenv().HitChance then AimbotConfig.HitChance = getgenv().HitChance end
+if getgenv().wallcheck ~= nil then AimbotConfig.WallCheck = getgenv().wallcheck end
+if getgenv().TargetParts then AimbotConfig.TargetParts = getgenv().TargetParts end
+if getgenv().radius then AimbotConfig.FOVRadius = getgenv().radius end
+if getgenv().HighlightTarget ~= nil then AimbotConfig.HighlightTarget = getgenv().HighlightTarget end
 
 -- Executor compatibility check
 local function checkExecutorCompatibility()
@@ -1013,6 +1020,26 @@ local function checkExecutorCompatibility()
         end
     end
     return true
+end
+
+-- Get executor global
+local function getExecutorGlobal(...)
+    for _, name in ipairs({...}) do
+        local value = rawget(_G, name)
+        if value then return value end
+    end
+    return nil
+end
+
+-- Check FFlag
+local function checkFFlag(name, expectedValue)
+    local success, result = pcall(getfflag, name)
+    if not success then return false end
+    
+    if type(expectedValue) == "boolean" then
+        return result == expectedValue
+    end
+    return tostring(result) == tostring(expectedValue)
 end
 
 -- Bin cleanup system
@@ -1351,9 +1378,11 @@ local function initializeAimbot()
     if aimbotActive then return end
     
     -- Services
-    LocalPlayer = Players.LocalPlayer
+    Players = game:GetService("Players")
     RunService = game:GetService("RunService")
     ReplicatedStorage = game:GetService("ReplicatedStorage")
+    Workspace = game:GetService("Workspace")
+    LocalPlayer = Players.LocalPlayer
     
     -- Game-specific modules
     local Gun_utls = ReplicatedStorage:WaitForChild("gun_res", 30)
@@ -1411,110 +1440,8 @@ local function shutdownAimbot()
 end
 
 -- ============================================================================
--- UI CREATION - FIXED CALLBACKS
+// UI CREATION
 -- ============================================================================
-
--- ESP Toggle
-local ESPToggle = ESPTab:CreateToggle({
-    Name = "Enable ESP",
-    CurrentValue = false,
-    Flag = "ESPToggle",
-    Callback = function(Value)
-        espEnabled = Value
-        if Value then
-            espEnabled = true
-            stopEspLoop = false
-            print("Blood Debt Role Detector: ESP Enabled")
-
-            -- Start ESP detection loop
-            task.spawn(function()
-                while espEnabled and not stopEspLoop do
-                    task.wait(0.5)
-                    updateDroppedGunEsp()
-                    detectRoles()
-                end
-                print("Blood Debt Role Detector: ESP Detection loop stopped.")
-            end)
-
-            -- Connect player events
-            espPlayerAddedConnection = game.Players.PlayerAdded:Connect(function(player)
-                local charAddedConn = player.CharacterAdded:Connect(function(character)
-                    task.wait(0.1)
-                    connectHintTextSignal()
-                    detectRoles()
-                end)
-                espCharacterAddedConnections[player] = charAddedConn
-
-                if player.Character then
-                    task.wait(0.1)
-                    detectRoles()
-                end
-            end)
-
-            -- Handle player removing
-            game.Players.PlayerRemoving:Connect(function(player)
-                if espCharacterAddedConnections[player] then
-                    if typeof(espCharacterAddedConnections[player]) == "RBXScriptConnection" then
-                        espCharacterAddedConnections[player]:Disconnect()
-                    end
-                    espCharacterAddedConnections[player] = nil
-                end
-                clearOldStuff(player.Character)
-            end)
-
-            -- Connect hint text signal
-            connectHintTextSignal()
-            
-            -- Initial detection
-            detectRoles()
-            updateDroppedGunEsp()
-
-            Rayfield:Notify({
-                Title = "ESP Enabled",
-                Content = "Role detection has been turned on.",
-                Duration = 3,
-                Image = 4483362458
-            })
-        else
-            disableEsp()
-        end
-    end
-})
-
--- Nametag Mode Dropdown - FIXED CALLBACK
-ESPTab:CreateDropdown({
-    Name = "Nametag Display Mode",
-    Options = {"Role", "Username", "Character Name"},
-    CurrentOption = {"Role"},  -- Table format for Rayfield
-    MultipleOptions = false,
-    Flag = "NametagModeDropdown",
-    Callback = function(Option)
-        -- Option is a table, get the first/selected value
-        local selectedMode = Option[1] or "Role"
-        nametagMode = selectedMode
-        print("Blood Debt Role Detector: Nametag mode changed to:", nametagMode)
-        
-        -- Re-apply tags to update nametags immediately
-        if espEnabled then
-            detectRoles()
-        end
-        
-        Rayfield:Notify({
-            Title = "Nametag Mode Changed",
-            Content = "Now displaying: " .. nametagMode,
-            Duration = 3,
-            Image = 4483362458
-        })
-    end,
-})
-
--- Teleport to Dropped Gun Button
-ESPTab:CreateButton({
-    Name = "Teleport to Dropped Gun",
-    Callback = function()
-        tpToDroppedGun()
-    end
-})
 
 -- Silent Aimbot Toggle
 local AimbotToggle = AimbotTab:CreateToggle({
@@ -1609,26 +1536,121 @@ AimbotTab:CreateToggle({
     end
 })
 
--- Target Parts Dropdown - FIXED CALLBACK
+-- Target Parts Dropdown
 AimbotTab:CreateDropdown({
     Name = "Target Part",
     Options = {"Head", "Torso", "HumanoidRootPart", "Random"},
-    CurrentOption = {"Head"},  -- Table format for Rayfield
+    CurrentOption = {"Head"},
     MultipleOptions = false,
     Flag = "TargetPartDropdown",
     Callback = function(Option)
-        -- Option is a table, get the first/selected value
-        local selectedPart = Option[1] or "Head"
-        
-        if selectedPart == "Random" then
+        if Option[1] == "Random" then
             AimbotConfig.UseRandomPart = true
             AimbotConfig.TargetParts = {"Head", "Torso", "HumanoidRootPart"}
         else
             AimbotConfig.UseRandomPart = false
-            AimbotConfig.TargetParts = {selectedPart}
+            AimbotConfig.TargetParts = {Option[1]}
+        end
+    end
+})
+
+-- ESP Toggle - COMPLETE WITH ALL FUNCTIONALITY
+local ESPToggle = ESPTab:CreateToggle({
+    Name = "Enable ESP",
+    CurrentValue = false,
+    Flag = "ESPToggle",
+    Callback = function(Value)
+        espEnabled = Value
+        if Value then
+            espEnabled = true
+            stopEspLoop = false
+            print("Blood Debt Role Detector: ESP Enabled")
+
+            -- Start ESP detection loop
+            task.spawn(function()
+                while espEnabled and not stopEspLoop do
+                    task.wait(0.5)
+                    updateDroppedGunEsp()
+                    detectRoles()
+                end
+                print("Blood Debt Role Detector: ESP Detection loop stopped.")
+            end)
+
+            -- Connect player events
+            espPlayerAddedConnection = game.Players.PlayerAdded:Connect(function(player)
+                local charAddedConn = player.CharacterAdded:Connect(function(character)
+                    task.wait(0.1)
+                    connectHintTextSignal()
+                    detectRoles()
+                end)
+                espCharacterAddedConnections[player] = charAddedConn
+
+                if player.Character then
+                    task.wait(0.1)
+                    detectRoles()
+                end
+            end)
+
+            -- Handle player removing
+            game.Players.PlayerRemoving:Connect(function(player)
+                if espCharacterAddedConnections[player] then
+                    if typeof(espCharacterAddedConnections[player]) == "RBXScriptConnection" then
+                        espCharacterAddedConnections[player]:Disconnect()
+                    end
+                    espCharacterAddedConnections[player] = nil
+                end
+                clearOldStuff(player.Character)
+            end)
+
+            -- Connect hint text signal
+            connectHintTextSignal()
+            
+            -- Initial detection
+            detectRoles()
+            updateDroppedGunEsp()
+
+            Rayfield:Notify({
+                Title = "ESP Enabled",
+                Content = "Role detection has been turned on.",
+                Duration = 3,
+                Image = 4483362458
+            })
+        else
+            disableEsp()
+        end
+    end
+})
+
+-- Nametag Mode Dropdown
+ESPTab:CreateDropdown({
+    Name = "Nametag Display Mode",
+    Options = {"Role", "Username", "Character Name"},
+    CurrentOption = {"Role"},
+    MultipleOptions = false,
+    Flag = "NametagModeDropdown",
+    Callback = function(Option)
+        nametagMode = Option[1] or "Role"
+        print("Blood Debt Role Detector: Nametag mode changed to:", nametagMode)
+        
+        -- Re-apply tags to update nametags immediately
+        if espEnabled then
+            detectRoles()
         end
         
-        print("Target part changed to:", selectedPart)
+        Rayfield:Notify({
+            Title = "Nametag Mode Changed",
+            Content = "Now displaying: " .. nametagMode,
+            Duration = 3,
+            Image = 4483362458
+        })
+    end,
+})
+
+-- Teleport to Dropped Gun Button
+ESPTab:CreateButton({
+    Name = "Teleport to Dropped Gun",
+    Callback = function()
+        tpToDroppedGun()
     end
 })
 
@@ -1663,4 +1685,4 @@ Rayfield:Notify({
     Image = 4483362458
 })
 
-print("Fixed Integrated ESP & Silent Aimbot script loaded successfully")
+print("Fully Integrated ESP & Silent Aimbot script loaded successfully")
